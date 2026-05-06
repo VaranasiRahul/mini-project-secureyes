@@ -5,6 +5,15 @@ kube-prometheus-stack:
       dashboards:
         enabled: true
         label: grafana_dashboard
+    # Provision Loki as a datasource so the Platform Health dashboard's
+    # log panel works out of the box. Prometheus is auto-provisioned.
+    additionalDataSources:
+      - name: Loki
+        type: loki
+        uid: loki
+        url: http://loki.monitoring.svc:3100
+        access: proxy
+        isDefault: false
     resources:
       requests:
         cpu: 50m

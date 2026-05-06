@@ -10,33 +10,6 @@ metadata:
 data:
   platform-health.json: |-
     {
-      "__inputs": [
-        {
-          "name": "DS_PROMETHEUS",
-          "label": "Prometheus",
-          "description": "",
-          "type": "datasource",
-          "pluginId": "prometheus",
-          "pluginName": "Prometheus"
-        },
-        {
-          "name": "DS_LOKI",
-          "label": "Loki",
-          "description": "",
-          "type": "datasource",
-          "pluginId": "loki",
-          "pluginName": "Loki"
-        }
-      ],
-      "__requires": [
-        { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" },
-        { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" },
-        { "type": "datasource", "id": "loki", "name": "Loki", "version": "1.0.0" },
-        { "type": "panel", "id": "timeseries", "name": "Time series", "version": "" },
-        { "type": "panel", "id": "gauge", "name": "Gauge", "version": "" },
-        { "type": "panel", "id": "stat", "name": "Stat", "version": "" },
-        { "type": "panel", "id": "logs", "name": "Logs", "version": "" }
-      ],
       "annotations": { "list": [] },
       "description": "Platform Health — Node, Pod, API metrics and logs",
       "editable": true,
@@ -53,7 +26,7 @@ data:
           "type": "row"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
@@ -76,7 +49,7 @@ data:
           "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true },
           "targets": [
             {
-              "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
               "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
               "legendFormat": "CPU %",
               "refId": "A"
@@ -86,7 +59,7 @@ data:
           "type": "gauge"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
@@ -109,7 +82,7 @@ data:
           "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true },
           "targets": [
             {
-              "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
               "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
               "legendFormat": "Mem %",
               "refId": "A"
@@ -119,7 +92,7 @@ data:
           "type": "gauge"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "fieldConfig": {
             "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" },
             "overrides": []
@@ -129,7 +102,7 @@ data:
           "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
           "targets": [
             {
-              "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
               "expr": "rate(node_cpu_seconds_total{mode!=\"idle\"}[5m]) * 100",
               "legendFormat": "{{mode}}",
               "refId": "A"
@@ -146,7 +119,7 @@ data:
           "type": "row"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
@@ -166,7 +139,7 @@ data:
           "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
           "targets": [
             {
-              "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
               "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"apps\"}[1h]))",
               "legendFormat": "{{pod}}",
               "refId": "A"
@@ -176,7 +149,7 @@ data:
           "type": "stat"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "fieldConfig": {
             "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" },
             "overrides": []
@@ -186,7 +159,7 @@ data:
           "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi" } },
           "targets": [
             {
-              "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
               "expr": "kube_pod_status_phase{namespace=\"apps\"}",
               "legendFormat": "{{pod}} — {{phase}}",
               "refId": "A"
@@ -203,7 +176,7 @@ data:
           "type": "row"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "fieldConfig": {
             "defaults": { "color": { "mode": "palette-classic" }, "unit": "reqps" },
             "overrides": []
@@ -213,7 +186,7 @@ data:
           "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
           "targets": [
             {
-              "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
               "expr": "sum by (method, endpoint, status) (rate(api_requests_total[5m]))",
               "legendFormat": "{{method}} {{endpoint}} {{status}}",
               "refId": "A"
@@ -223,7 +196,7 @@ data:
           "type": "timeseries"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "fieldConfig": {
             "defaults": { "color": { "mode": "palette-classic" }, "unit": "s" },
             "overrides": []
@@ -233,13 +206,13 @@ data:
           "options": { "legend": { "calcs": ["mean", "p99"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
           "targets": [
             {
-              "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
               "expr": "histogram_quantile(0.50, sum by (le, endpoint) (rate(api_request_duration_seconds_bucket[5m])))",
               "legendFormat": "p50 {{endpoint}}",
               "refId": "A"
             },
             {
-              "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
               "expr": "histogram_quantile(0.99, sum by (le, endpoint) (rate(api_request_duration_seconds_bucket[5m])))",
               "legendFormat": "p99 {{endpoint}}",
               "refId": "B"
@@ -256,7 +229,7 @@ data:
           "type": "row"
         },
         {
-          "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+          "datasource": { "type": "loki", "uid": "loki" },
           "gridPos": { "h": 10, "w": 24, "x": 0, "y": 23 },
           "id": 8,
           "options": {
@@ -271,7 +244,7 @@ data:
           },
           "targets": [
             {
-              "datasource": { "type": "loki", "uid": "${DS_LOKI}" },
+              "datasource": { "type": "loki", "uid": "loki" },
               "expr": "{service=\"api\"}",
               "legendFormat": "",
               "refId": "A"

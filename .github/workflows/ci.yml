@@ -43,6 +43,11 @@ jobs:
           helm dependency update helm/charts/external-secrets
           helm lint helm/charts/external-secrets
 
+      - name: Create secret.env for kustomize validation
+        run: |
+          printf 'POSTGRES_USER=lint\nPOSTGRES_PASSWORD=lint\nDATABASE_URL=postgresql://lint:lint@postgres:5432/taskdb\n' > k8s/overlays/dev/secret.env
+          cp k8s/overlays/dev/secret.env k8s/overlays/qat/secret.env
+
       - name: Validate Kustomize — dev/postgres
         run: kustomize build k8s/overlays/dev/postgres > /dev/null
 
@@ -111,6 +116,12 @@ jobs:
             --from-literal=POSTGRES_PASSWORD=ci-test-secret \
             --from-literal=DATABASE_URL=postgresql://taskuser:ci-test-secret@postgres:5432/taskdb \
             -n apps --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create secret.env for kustomize
+        run: |
+          # kustomize secretGenerator needs secret.env to exist (it's gitignored)
+          printf 'POSTGRES_USER=taskuser\nPOSTGRES_PASSWORD=ci-test-secret\nDATABASE_URL=postgresql://taskuser:ci-test-secret@postgres:5432/taskdb\n' > k8s/overlays/dev/secret.env
+          cp k8s/overlays/dev/secret.env k8s/overlays/qat/secret.env
 
       - name: Patch image tags and apply dev overlay
         run: |
