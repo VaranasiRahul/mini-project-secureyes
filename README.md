@@ -1,8 +1,6 @@
 # Task Manager — DevOps Demo
 
-> **Interview demo project** showcasing Docker Compose, Kind, Helm, Kustomize, ArgoCD, NetworkPolicies, and Prometheus/Grafana/Loki.
->
-> **AI tools used:** Antigravity (Google DeepMind) — generated the full implementation plan, Helm chart values, Kustomize structure, CI pipeline, and README skeleton. All generated code was reviewed, understood, and adapted by the author.
+A full-stack Task Manager application (React + FastAPI + PostgreSQL) with a production-grade DevOps setup covering containerization, orchestration, GitOps, observability, and security.
 
 ---
 
@@ -21,28 +19,53 @@
 ## Architecture
 
 ```
-GitHub ──push──▶ GitHub Actions (lint → build → trivy → deploy-kind)
-                        │
-                        ▼
-                  Kind cluster
-                  ┌─────────────────────────────────────────┐
-                  │  argocd ns      monitoring ns    apps ns │
-                  │  ──────────     ──────────────   ─────── │
-                  │  ArgoCD    ◀──  Prometheus       api     │
-                  │  (syncs    ──▶  Grafana          web     │
-                  │  from Git)      Loki/Promtail    postgres│
-                  │                 AlertManager             │
-                  │  ingress-nginx (routes localhost:80/443)  │
-                  └─────────────────────────────────────────┘
-```
+                          +-------------+
+                          | GitHub Repo |
+                          +------+------+
+                                 |
+                          push to main
+                                 |
+                                 v
+                    +------------------------+
+                    |    GitHub Actions CI    |
+                    | lint > build > scan >  |
+                    | deploy to Kind cluster |
+                    +------------------------+
+                                 |
+                    ArgoCD watches repo
+                                 |
+                                 v
+    +------------------------------------------------------------+
+    |                     Kind Cluster                           |
+    |                                                            |
+    |   argocd ns         monitoring ns           apps ns        |
+    |  +----------+     +----------------+     +-----------+     |
+    |  | ArgoCD   |     | Prometheus     |     | web (fe)  |     |
+    |  | Server   |     | Grafana        |     | api (be)  |     |
+    |  +----------+     | Loki+Promtail  |     | postgres  |     |
+    |                   | AlertManager   |     +-----------+     |
+    |                   +----------------+                       |
+    |                                                            |
+    |   ingress-nginx ns                                         |
+    |  +------------------+                                      |
+    |  | ingress-nginx    | --> routes localhost to web/api       |
+    |  +------------------+                                      |
+    +------------------------------------------------------------+
 
-**Zero-trust networking:** `default-deny-all` NetworkPolicy blocks all traffic by default. Explicit policies allow only: ingress-nginx → web/api, api → postgres, monitoring → api (scrape).
+    Network Policies:
+    - default-deny-all (blocks everything by default)
+    - ingress-nginx --> web, api  (allowed)
+    - api --> postgres            (allowed)
+    - monitoring --> api          (scrape /metrics)
+```
 
 ---
 
 ## Prerequisites
 
-Install on your machine before starting:
+Install the following tools before starting.
+
+### macOS
 
 | Tool | Version | Install |
 |------|---------|---------|
@@ -54,6 +77,21 @@ Install on your machine before starting:
 | mkcert | latest | `brew install mkcert` |
 | trivy | latest | `brew install aquasecurity/trivy/trivy` |
 | argocd CLI | latest | `brew install argocd` (optional) |
+
+### Windows
+
+| Tool | Version | Install |
+|------|---------|---------|
+| Docker Desktop | latest | https://www.docker.com/products/docker-desktop |
+| kubectl | ≥ 1.29 | `choco install kubernetes-cli` or `winget install Kubernetes.kubectl` |
+| kind | ≥ 0.22 | `choco install kind` or `go install sigs.k8s.io/kind@latest` |
+| helm | ≥ 3.13 | `choco install kubernetes-helm` or `winget install Helm.Helm` |
+| kustomize | ≥ 5.0 | `choco install kustomize` |
+| mkcert | latest | `choco install mkcert` |
+| trivy | latest | `choco install trivy` |
+| argocd CLI | latest | Download from [ArgoCD releases](https://github.com/argoproj/argo-cd/releases) (optional) |
+
+> On Windows, use Git Bash or WSL2 to run the shell scripts (`.sh` files).
 
 ---
 
@@ -119,6 +157,8 @@ cp k8s/overlays/dev/secret.env.example k8s/overlays/dev/secret.env
 127.0.0.1   tasks.local tasks.qat.local
 ```
 
+> On Windows, the hosts file is at `C:\Windows\System32\drivers\etc\hosts`. Open Notepad as Administrator to edit it.
+
 ### Manual steps (if you prefer)
 
 ```bash
@@ -156,6 +196,20 @@ kubectl port-forward svc/argocd-server -n argocd 8080:443
 # Username: admin
 # Password: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
 ```
+
+### Sync waves
+
+ArgoCD deploys resources in order using sync-wave annotations:
+
+| Wave | What gets deployed |
+|------|--------------------|
+| 0 | ingress-nginx, external-secrets |
+| 1 | kube-prometheus-stack (Prometheus + Grafana) |
+| 2 | loki-stack (log aggregation) |
+| 10 | postgres (database) |
+| 20 | api + web (application tier) |
+
+This ensures the database is ready before the app tries to connect to it.
 
 ### Demonstrating auto-deploy
 
@@ -203,7 +257,11 @@ The **Platform Health** dashboard is auto-provisioned and shows:
 - API request rate (from `/metrics`)
 - API logs from Loki
 
-> **Note on RabbitMQ exporter:** The spec mentions a RabbitMQ built-in exporter. This app has no message queue, so it is intentionally omitted. If RabbitMQ were added, the `kube-prometheus-stack` wrapper's `values.yaml` would enable the built-in RabbitMQ ServiceMonitor under `kube-prometheus-stack.additionalServiceMonitors`.
+### Custom alert: APINoTraffic
+
+A `PrometheusRule` fires when the API receives zero HTTP requests for 5 minutes (with a startup guard to avoid false positives on fresh clusters). Check it under Prometheus → Alerts.
+
+> **Note on RabbitMQ:** This app has no message queue, so the RabbitMQ exporter is intentionally omitted. If RabbitMQ were added, the `kube-prometheus-stack` wrapper's `values.yaml` would enable the built-in ServiceMonitor under `additionalServiceMonitors`.
 
 ### Trigger an alert
 
@@ -212,20 +270,21 @@ The **Platform Health** dashboard is auto-provisioned and shows:
 ./scripts/load-test.sh --url http://localhost:8000 --requests 600
 
 # Check alerts firing
-open http://localhost:9090/alerts
+open http://localhost:9090/alerts        # macOS
+# or: start http://localhost:9090/alerts  # Windows
 ```
 
 ---
 
 ## CI Pipeline
 
-Every push to `main`:
-1. **Lint** — ruff (Python), helm lint (charts), kustomize build (overlays)
-2. **Build** — Docker images for `api` and `web`
-3. **Scan** — Trivy scans both images; fails on CRITICAL CVEs
-4. **Deploy** — Applies dev overlay to an ephemeral Kind cluster and smoke-tests the API
+Every push to `main` triggers a 3-job pipeline in GitHub Actions:
 
-See `.github/workflows/ci.yml`.
+1. **Lint** — ruff (Python), helm lint (all Helm charts), kubectl kustomize (validates dev + qat overlays)
+2. **Build & Scan** — Docker images for `api` and `web`, then Trivy scans both for CRITICAL/HIGH CVEs
+3. **Deploy to Kind** — Creates an ephemeral Kind cluster, installs Prometheus CRDs, applies the full dev overlay, and verifies that all resources (Deployments, Services, NetworkPolicies, ServiceMonitors) are created correctly
+
+See [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for the full workflow.
 
 ---
 
