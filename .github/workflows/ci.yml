@@ -49,10 +49,10 @@ jobs:
           cp k8s/overlays/dev/secret.env k8s/overlays/qat/secret.env
 
       - name: Validate Kustomize — dev
-        run: kustomize build k8s/overlays/dev > /dev/null
+        run: kubectl kustomize k8s/overlays/dev > /dev/null
 
       - name: Validate Kustomize — qat
-        run: kustomize build k8s/overlays/qat > /dev/null
+        run: kubectl kustomize k8s/overlays/qat > /dev/null
 
   # ── Build & Scan ─────────────────────────────────────────────────────────────
   build-and-scan:
@@ -124,7 +124,7 @@ jobs:
 
       - name: Patch image tags and apply dev overlay
         run: |
-          kustomize build k8s/overlays/dev \
+          kubectl kustomize k8s/overlays/dev \
             | sed "s|task-api:local|task-api:${{ github.sha }}|g" \
             | sed "s|task-web:local|task-web:${{ github.sha }}|g" \
             | kubectl apply -f -
