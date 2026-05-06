@@ -203,6 +203,8 @@ The **Platform Health** dashboard is auto-provisioned and shows:
 - API request rate (from `/metrics`)
 - API logs from Loki
 
+> **Note on RabbitMQ exporter:** The spec mentions a RabbitMQ built-in exporter. This app has no message queue, so it is intentionally omitted. If RabbitMQ were added, the `kube-prometheus-stack` wrapper's `values.yaml` would enable the built-in RabbitMQ ServiceMonitor under `kube-prometheus-stack.additionalServiceMonitors`.
+
 ### Trigger an alert
 
 ```bash
