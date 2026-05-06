@@ -4,6 +4,7 @@ metadata:
   name: api
   namespace: apps
   annotations:
+    argocd.argoproj.io/sync-wave: "20"
     # Tell Prometheus to scrape this deployment's pods
     prometheus.io/scrape: "true"
     prometheus.io/port: "8000"

@@ -8,58 +8,42 @@ spec:
     - list:
         elements:
           # ── Wave 0: networking infra + secret management ─────────────────────
-          # These must be ready before any app can start.
           - app: ingress-nginx
             path: helm/charts/ingress-nginx
             namespace: ingress-nginx
             wave: "0"
-            sourceType: helm
 
           - app: external-secrets
             path: helm/charts/external-secrets
             namespace: external-secrets
             wave: "0"
-            sourceType: helm
 
           # ── Wave 1: monitoring stack ─────────────────────────────────────────
-          # Prometheus + Grafana + AlertManager. Comes after infra.
           - app: monitoring
             path: helm/charts/kube-prometheus-stack
             namespace: monitoring
             wave: "1"
-            sourceType: helm
 
           # ── Wave 2: log aggregation ──────────────────────────────────────────
-          # Loki + Promtail. Depends on monitoring namespace existing.
           - app: loki
             path: helm/charts/loki-stack
             namespace: monitoring
             wave: "2"
-            sourceType: helm
 
-          # ── Wave 10: database ────────────────────────────────────────────────
-          # Postgres must be healthy before the api starts.
-          - app: postgres
-            path: k8s/overlays/dev/postgres
+          # ── Wave 10-20: application tier ─────────────────────────────────────
+          # postgres (wave 10), api + web (wave 20) are controlled by
+          # sync-wave annotations ON the individual k8s resources in k8s/base/.
+          # ArgoCD deploys them in the correct order within this single app.
+          - app: apps
+            path: k8s/overlays/dev
             namespace: apps
             wave: "10"
-            sourceType: kustomize
-
-          # ── Wave 20: application tier ────────────────────────────────────────
-          # api and web deploy last, after postgres is ready.
-          - app: apps
-            path: k8s/overlays/dev/apps
-            namespace: apps
-            wave: "20"
-            sourceType: kustomize
 
   template:
     metadata:
       name: "dev-{{app}}"
       namespace: argocd
       annotations:
-        # ArgoCD sync waves control deployment ORDER across Applications.
-        # An Application at wave N will not start until all wave N-1 apps are Healthy.
         argocd.argoproj.io/sync-wave: "{{wave}}"
     spec:
       project: task-manager

@@ -48,11 +48,8 @@ jobs:
           printf 'POSTGRES_USER=lint\nPOSTGRES_PASSWORD=lint\nDATABASE_URL=postgresql://lint:lint@postgres:5432/taskdb\n' > k8s/overlays/dev/secret.env
           cp k8s/overlays/dev/secret.env k8s/overlays/qat/secret.env
 
-      - name: Validate Kustomize — dev/postgres
-        run: kustomize build k8s/overlays/dev/postgres > /dev/null
-
-      - name: Validate Kustomize — dev/apps
-        run: kustomize build k8s/overlays/dev/apps > /dev/null
+      - name: Validate Kustomize — dev
+        run: kustomize build k8s/overlays/dev > /dev/null
 
       - name: Validate Kustomize — qat
         run: kustomize build k8s/overlays/qat > /dev/null
@@ -125,9 +122,7 @@ jobs:
 
       - name: Patch image tags and apply dev overlay
         run: |
-          # Apply postgres first (wave 10), then apps (wave 20)
-          kustomize build k8s/overlays/dev/postgres | kubectl apply -f -
-          kustomize build k8s/overlays/dev/apps \
+          kustomize build k8s/overlays/dev \
             | sed "s|task-api:local|task-api:${{ github.sha }}|g" \
             | sed "s|task-web:local|task-web:${{ github.sha }}|g" \
             | kubectl apply -f -

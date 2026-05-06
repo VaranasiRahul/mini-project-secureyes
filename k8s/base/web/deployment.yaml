@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: web
   namespace: apps
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
 spec:
   replicas: 1
   selector:
