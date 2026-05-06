@@ -38,6 +38,11 @@ jobs:
           helm dependency update helm/charts/loki-stack
           helm lint helm/charts/loki-stack
 
+      - name: Lint Helm — external-secrets
+        run: |
+          helm dependency update helm/charts/external-secrets
+          helm lint helm/charts/external-secrets
+
       - name: Validate Kustomize — dev/postgres
         run: kustomize build k8s/overlays/dev/postgres > /dev/null
 

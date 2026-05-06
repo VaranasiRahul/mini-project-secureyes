@@ -74,7 +74,7 @@ cp environments/local/.env.example environments/local/.env
 ./scripts/deploy.sh start --profile monitoring
 
 # 4. Verify all services healthy (~60s)
-docker compose ps
+./scripts/deploy.sh status
 ```
 
 ### Endpoints

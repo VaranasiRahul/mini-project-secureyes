@@ -14,7 +14,7 @@ spec:
     matchLabels:
       app: api
   endpoints:
-    - port: "8000"     # must match the Service port name or number
+    - port: http      # matches the named port on the Service (name: http, port: 8000)
       path: /metrics
       interval: 15s
       scrapeTimeout: 10s

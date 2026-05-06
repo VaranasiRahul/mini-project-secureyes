@@ -3,9 +3,13 @@ groups:
   - name: api.rules
     rules:
       - alert: APINoTraffic
-        # Fires when the API has received zero requests for 2 minutes.
-        # Useful demo: stop the load test, wait 2 min, alert fires.
-        expr: rate(api_requests_total[2m]) == 0
+        # Fires when the API counter EXISTS (i.e. api has started) but has received
+        # zero new requests for 2 minutes. The 'sum > 0' guard prevents false-fires
+        # on a fresh cluster before the first request hits the API.
+        expr: |
+          sum(rate(api_requests_total[2m])) == 0
+          and
+          sum(api_requests_total) > 0
         for: 2m
         labels:
           severity: warning

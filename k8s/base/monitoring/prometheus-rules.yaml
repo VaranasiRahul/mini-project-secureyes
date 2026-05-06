@@ -15,7 +15,10 @@ spec:
     - name: api.rules
       rules:
         - alert: APINoTraffic
-          expr: rate(api_requests_total[2m]) == 0
+          expr: |
+            sum(rate(api_requests_total[2m])) == 0
+            and
+            sum(api_requests_total) > 0
           for: 2m
           labels:
             severity: warning
