@@ -1,4 +1,3 @@
-version: "3.9"
 
 # Reusable logging config
 x-logging: &default-logging
