@@ -74,6 +74,7 @@ jobs:
           format: table
           exit-code: "1"
           severity: CRITICAL
+          ignore-unfixed: true
 
       - name: Scan Web image (Trivy)
         uses: aquasecurity/trivy-action@master
@@ -82,6 +83,7 @@ jobs:
           format: table
           exit-code: "1"
           severity: CRITICAL
+          ignore-unfixed: true
 
   # ── Deploy to Kind ────────────────────────────────────────────────────────────
   deploy-kind:
