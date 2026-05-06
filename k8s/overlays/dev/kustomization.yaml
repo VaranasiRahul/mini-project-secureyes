@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Pull in the shared base
+resources:
+  - ../../base
+  - ingress.yaml
+
+namespace: apps
+
+# Secret generated from a gitignored file — never committed
+secretGenerator:
+  - name: postgres-secret
+    envs:
+      - secret.env   # POSTGRES_USER=, POSTGRES_PASSWORD=, DATABASE_URL=
+
+patches:
+  # Set single replica for dev (base default is already 1, but being explicit)
+  - target:
+      kind: Deployment
+      name: api
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: Deployment
+      name: web
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1

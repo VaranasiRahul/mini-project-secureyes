@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: task-manager-qat
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - app: apps-qat
+            path: k8s/overlays/qat
+            namespace: apps
+            wave: "20"
+
+  template:
+    metadata:
+      name: "qat-{{app}}"
+      namespace: argocd
+      annotations:
+        argocd.argoproj.io/sync-wave: "{{wave}}"
+    spec:
+      project: task-manager
+      source:
+        repoURL: https://github.com/YOUR_USERNAME/mini-project
+        targetRevision: main
+        path: "{{path}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{namespace}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

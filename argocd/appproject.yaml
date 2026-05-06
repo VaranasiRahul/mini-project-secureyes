@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: task-manager
+  namespace: argocd
+  # Finalizer prevents deletion if apps still exist
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Task Manager DevOps demo project
+  sourceRepos:
+    - "*"   # allow any repo; restrict to your specific repo in production
+  destinations:
+    - namespace: apps
+      server: https://kubernetes.default.svc
+    - namespace: monitoring
+      server: https://kubernetes.default.svc
+    - namespace: ingress-nginx
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

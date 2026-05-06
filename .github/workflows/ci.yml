@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # ── Lint ─────────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Lint Python (ruff)
+        run: |
+          pip install ruff
+          ruff check app/api/
+
+      - name: Lint Helm — ingress-nginx
+        run: |
+          helm dependency update helm/charts/ingress-nginx
+          helm lint helm/charts/ingress-nginx
+
+      - name: Lint Helm — kube-prometheus-stack
+        run: |
+          helm dependency update helm/charts/kube-prometheus-stack
+          helm lint helm/charts/kube-prometheus-stack
+
+      - name: Lint Helm — loki-stack
+        run: |
+          helm dependency update helm/charts/loki-stack
+          helm lint helm/charts/loki-stack
+
+      - name: Validate Kustomize — dev
+        run: kustomize build k8s/overlays/dev > /dev/null
+
+      - name: Validate Kustomize — qat
+        run: kustomize build k8s/overlays/qat > /dev/null
+
+  # ── Build & Scan ─────────────────────────────────────────────────────────────
+  build-and-scan:
+    name: Build & Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -t task-api:${{ github.sha }} ./app/api
+
+      - name: Build Web image
+        run: docker build -t task-web:${{ github.sha }} ./app/web
+
+      - name: Scan API image (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: task-api:${{ github.sha }}
+          format: table
+          exit-code: "1"
+          severity: CRITICAL
+
+      - name: Scan Web image (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: task-web:${{ github.sha }}
+          format: table
+          exit-code: "1"
+          severity: CRITICAL
+
+  # ── Deploy to Kind ────────────────────────────────────────────────────────────
+  deploy-kind:
+    name: Deploy to Kind
+    needs: [lint, build-and-scan]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1.9.0
+        with:
+          cluster_name: ci-cluster
+          config: kind-config.yaml
+
+      - name: Build and load images into Kind
+        run: |
+          docker build -t task-api:${{ github.sha }} ./app/api
+          docker build -t task-web:${{ github.sha }} ./app/web
+          kind load docker-image task-api:${{ github.sha }} --name ci-cluster
+          kind load docker-image task-web:${{ github.sha }} --name ci-cluster
+
+      - name: Create namespace and secret
+        run: |
+          kubectl create namespace apps --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic postgres-secret \
+            --from-literal=POSTGRES_USER=taskuser \
+            --from-literal=POSTGRES_PASSWORD=ci-test-secret \
+            --from-literal=DATABASE_URL=postgresql://taskuser:ci-test-secret@postgres:5432/taskdb \
+            -n apps --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Patch image tags and apply dev overlay
+        run: |
+          # Patch the image tag in-place for CI
+          kustomize build k8s/overlays/dev \
+            | sed "s|task-api:local|task-api:${{ github.sha }}|g" \
+            | sed "s|task-web:local|task-web:${{ github.sha }}|g" \
+            | kubectl apply -f -
+
+      - name: Wait for rollouts
+        run: |
+          kubectl rollout status deployment/api -n apps --timeout=120s
+          kubectl rollout status deployment/web -n apps --timeout=120s
+
+      - name: Smoke test API
+        run: |
+          kubectl port-forward svc/api 8000:8000 -n apps &
+          sleep 5
+          curl -f http://localhost:8000/healthz

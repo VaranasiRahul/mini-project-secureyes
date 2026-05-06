@@ -1,0 +1,73 @@
+# PrometheusRule CRD — defines alert rules natively in Kubernetes.
+# The Prometheus Operator (kube-prometheus-stack) watches for these and
+# loads them automatically — no need to edit prometheus.yml manually.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: task-manager-rules
+  namespace: apps
+  labels:
+    # Must match the ruleSelector in kube-prometheus-stack values
+    release: monitoring
+    app: kube-prometheus-stack
+spec:
+  groups:
+    - name: api.rules
+      rules:
+        - alert: APINoTraffic
+          expr: rate(api_requests_total[2m]) == 0
+          for: 2m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "API has no traffic"
+            description: "Zero requests received by the Task API for the past 2 minutes."
+            runbook: "kubectl get pods -n apps && kubectl logs -n apps deploy/api"
+
+        - alert: APIHighErrorRate
+          expr: |
+            sum(rate(api_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(api_requests_total[5m])) > 0.05
+          for: 1m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "High API error rate (>5%)"
+            description: "More than 5% of API requests are returning 5xx errors."
+
+        - alert: APIHighLatency
+          expr: |
+            histogram_quantile(0.99,
+              sum by (le) (rate(api_request_duration_seconds_bucket[5m]))
+            ) > 0.5
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "API p99 latency > 500ms"
+            description: "The 99th percentile API latency has exceeded 500ms for 2 minutes."
+
+    - name: pod.rules
+      rules:
+        - alert: PodCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="apps"}[15m]) > 3
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod {{ $labels.pod }} is crash-looping"
+            description: "{{ $labels.pod }} restarted >3 times in 15 minutes."
+            runbook: "kubectl logs -n apps {{ $labels.pod }} --previous"
+
+        - alert: PodNotReady
+          expr: |
+            kube_pod_status_ready{namespace="apps", condition="true"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.pod }} not ready for 5m"

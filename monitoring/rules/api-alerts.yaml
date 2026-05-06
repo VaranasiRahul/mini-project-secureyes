@@ -1,0 +1,97 @@
+groups:
+  # ── API application alerts ──────────────────────────────────────────────────
+  - name: api.rules
+    rules:
+      - alert: APINoTraffic
+        # Fires when the API has received zero requests for 2 minutes.
+        # Useful demo: stop the load test, wait 2 min, alert fires.
+        expr: rate(api_requests_total[2m]) == 0
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "API has no traffic"
+          description: "Zero requests received by the Task API for the past 2 minutes."
+          runbook: "Check if the api pod is Running: kubectl get pods -n apps"
+
+      - alert: APIHighErrorRate
+        # Fires if more than 5% of responses are non-2xx (once we add status label).
+        expr: |
+          sum(rate(api_requests_total{status=~"5.."}[5m]))
+          /
+          sum(rate(api_requests_total[5m])) > 0.05
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High API error rate (>5%)"
+          description: "More than 5% of API requests are returning 5xx errors."
+
+      - alert: APIHighLatency
+        # Fires if p99 latency exceeds 500ms for 2 consecutive minutes.
+        expr: |
+          histogram_quantile(0.99,
+            sum by (le) (rate(api_request_duration_seconds_bucket[5m]))
+          ) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "API p99 latency > 500ms"
+          description: "The 99th percentile API latency has exceeded 500ms for 2 minutes."
+
+  # ── Kubernetes pod alerts ───────────────────────────────────────────────────
+  - name: pod.rules
+    rules:
+      - alert: PodCrashLooping
+        # A pod restarting more than 3 times in the last 15 minutes.
+        expr: |
+          increase(kube_pod_container_status_restarts_total{namespace="apps"}[15m]) > 3
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Pod {{ $labels.pod }} is crash-looping"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted more than 3 times in 15 minutes."
+          runbook: "kubectl logs -n apps {{ $labels.pod }} --previous"
+
+      - alert: PodNotReady
+        # A pod has been in a non-Ready state for more than 5 minutes.
+        expr: |
+          kube_pod_status_ready{namespace="apps", condition="true"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Pod {{ $labels.pod }} not ready"
+          description: "Pod {{ $labels.pod }} has been in a non-Ready state for 5 minutes."
+
+  # ── Node alerts ─────────────────────────────────────────────────────────────
+  - name: node.rules
+    rules:
+      - alert: NodeHighCPU
+        expr: |
+          100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Node CPU > 85%"
+          description: "Node {{ $labels.instance }} CPU usage has been above 85% for 5 minutes."
+
+      - alert: NodeHighMemory
+        expr: |
+          (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Node memory > 85%"
+          description: "Node {{ $labels.instance }} memory usage has been above 85% for 5 minutes."

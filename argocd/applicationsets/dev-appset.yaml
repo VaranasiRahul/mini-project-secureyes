@@ -1,0 +1,59 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: task-manager-dev
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          # Wave 0: networking infra first
+          - app: ingress-nginx
+            path: helm/charts/ingress-nginx
+            namespace: ingress-nginx
+            wave: "0"
+          # Wave 1: monitoring stack
+          - app: monitoring
+            path: helm/charts/kube-prometheus-stack
+            namespace: monitoring
+            wave: "1"
+          # Wave 2: log aggregation
+          - app: loki
+            path: helm/charts/loki-stack
+            namespace: monitoring
+            wave: "2"
+          # Wave 20: our apps (postgres is inside the kustomize overlay)
+          - app: apps
+            path: k8s/overlays/dev
+            namespace: apps
+            wave: "20"
+
+  template:
+    metadata:
+      name: "dev-{{app}}"
+      namespace: argocd
+      annotations:
+        # Sync waves control the ORDER ArgoCD deploys apps:
+        # wave 0 → wave 1 → wave 2 → wave 20
+        argocd.argoproj.io/sync-wave: "{{wave}}"
+    spec:
+      project: task-manager
+      source:
+        # UPDATE: replace with your actual GitHub repo URL
+        repoURL: https://github.com/YOUR_USERNAME/mini-project
+        targetRevision: main
+        path: "{{path}}"
+        # For Helm wrapper charts, use helm source type
+        helm:
+          valueFiles:
+            - values.yaml
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{namespace}}"
+      syncPolicy:
+        automated:
+          prune: true       # remove resources deleted from Git
+          selfHeal: true    # revert manual kubectl changes
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true

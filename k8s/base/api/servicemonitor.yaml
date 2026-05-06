@@ -1,0 +1,23 @@
+# ServiceMonitor tells the Prometheus Operator (kube-prometheus-stack) to
+# scrape the api service on port 8000 at /metrics.
+# Without this, Prometheus in k8s won't know to scrape our custom app.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: api-monitor
+  namespace: apps
+  labels:
+    # This label must match the serviceMonitorSelector in kube-prometheus-stack values
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: api
+  endpoints:
+    - port: "8000"     # must match the Service port name or number
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+      - apps

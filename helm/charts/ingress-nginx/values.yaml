@@ -1,0 +1,32 @@
+# Values passed to the upstream ingress-nginx chart.
+# Using DaemonSet + hostNetwork so Kind's extraPortMappings work on localhost:80/443.
+ingress-nginx:
+  controller:
+    # DaemonSet ensures one controller per node in Kind's single-node setup
+    kind: DaemonSet
+    hostNetwork: true
+    hostPort:
+      enabled: true
+    service:
+      type: NodePort
+    # Disable webhook — saves resources and avoids cert issues in Kind
+    admissionWebhooks:
+      enabled: false
+    # Required: keeps node-specific config out of the container
+    nodeSelector:
+      ingress-ready: "true"
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        effect: NoSchedule
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+    # Security: non-root, no privilege escalation
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 101
+      allowPrivilegeEscalation: false
