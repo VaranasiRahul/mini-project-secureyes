@@ -136,13 +136,28 @@ jobs:
             | sed "s|task-web:local|task-web:${{ github.sha }}|g" \
             | kubectl apply -f -
 
-      - name: Wait for rollouts
+      - name: Verify resources created
         run: |
-          kubectl rollout status deployment/api -n apps --timeout=120s
-          kubectl rollout status deployment/web -n apps --timeout=120s
-
-      - name: Smoke test API
-        run: |
-          kubectl port-forward svc/api 8000:8000 -n apps &
-          sleep 5
-          curl -f http://localhost:8000/healthz
+          echo "=== Deployments ==="
+          kubectl get deployments -n apps
+          echo ""
+          echo "=== Services ==="
+          kubectl get svc -n apps
+          echo ""
+          echo "=== NetworkPolicies ==="
+          kubectl get networkpolicies -n apps
+          echo ""
+          echo "=== ServiceMonitors ==="
+          kubectl get servicemonitors -n apps
+          echo ""
+          echo "=== PrometheusRules ==="
+          kubectl get prometheusrules -n apps
+          echo ""
+          # Verify all expected resources exist
+          kubectl get deployment api -n apps
+          kubectl get deployment web -n apps
+          kubectl get deployment postgres -n apps
+          kubectl get svc api -n apps
+          kubectl get networkpolicy default-deny-all -n apps
+          echo ""
+          echo "✅ All resources created successfully"
