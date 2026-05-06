@@ -47,6 +47,7 @@ info "Adding Helm repos..."
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx          2>/dev/null || true
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>/dev/null || true
 helm repo add grafana https://grafana.github.io/helm-charts                      2>/dev/null || true
+helm repo add external-secrets https://charts.external-secrets.io                2>/dev/null || true
 helm repo update
 
 # ── ingress-nginx ─────────────────────────────────────────────────────────────
@@ -54,6 +55,13 @@ info "Installing ingress-nginx..."
 helm dependency update "$REPO_ROOT/helm/charts/ingress-nginx"
 helm upgrade --install ingress-nginx "$REPO_ROOT/helm/charts/ingress-nginx" \
   --namespace ingress-nginx --create-namespace \
+  --wait --timeout 120s
+
+# ── external-secrets ──────────────────────────────────────────────────────────
+info "Installing external-secrets operator..."
+helm dependency update "$REPO_ROOT/helm/charts/external-secrets"
+helm upgrade --install external-secrets "$REPO_ROOT/helm/charts/external-secrets" \
+  --namespace external-secrets --create-namespace \
   --wait --timeout 120s
 
 # ── kube-prometheus-stack ─────────────────────────────────────────────────────

@@ -1,0 +1,8 @@
+apiVersion: v2
+name: external-secrets-wrapper
+description: Helm wrapper pinning external-secrets-operator version for GitOps reproducibility
+version: 0.1.0
+dependencies:
+  - name: external-secrets
+    version: "0.9.20"
+    repository: "https://charts.external-secrets.io"

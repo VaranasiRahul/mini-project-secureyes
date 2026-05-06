@@ -51,6 +51,7 @@ Install on your machine before starting:
 | kind | ≥ 0.22 | `brew install kind` |
 | helm | ≥ 3.13 | `brew install helm` |
 | kustomize | ≥ 5.0 | `brew install kustomize` |
+| mkcert | latest | `brew install mkcert` |
 | trivy | latest | `brew install aquasecurity/trivy/trivy` |
 | argocd CLI | latest | `brew install argocd` (optional) |
 
@@ -63,7 +64,7 @@ Install on your machine before starting:
 ```bash
 # 1. Clone the repo
 git clone https://github.com/VaranasiRahul/mini-project-secureyes.git
-cd mini-project
+cd mini-project-secureyes
 
 # 2. Copy and edit env file
 cp environments/local/.env.example environments/local/.env

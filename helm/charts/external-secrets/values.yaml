@@ -1,0 +1,30 @@
+# Minimal values for external-secrets operator in a dev Kind cluster.
+# We use it to manage secret references in a GitOps-friendly way
+# (secrets sourced from a local fake/ESO ClusterSecretStore rather than
+# a cloud vault, keeping the project fully offline-capable).
+external-secrets:
+  installCRDs: true
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 50m
+      memory: 64Mi
+  webhook:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
+  certController:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 50m
+        memory: 64Mi
