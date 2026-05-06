@@ -21,7 +21,7 @@ spec:
     spec:
       project: task-manager
       source:
-        repoURL: https://github.com/YOUR_USERNAME/mini-project
+        repoURL: https://github.com/RahulVaranasi04/mini-project-secureyes
         targetRevision: main
         path: "{{path}}"
       destination:

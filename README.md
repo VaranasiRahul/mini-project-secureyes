@@ -62,7 +62,7 @@ Install on your machine before starting:
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/YOUR_USERNAME/mini-project.git
+git clone https://github.com/RahulVaranasi04/mini-project-secureyes.git
 cd mini-project
 
 # 2. Copy and edit env file
