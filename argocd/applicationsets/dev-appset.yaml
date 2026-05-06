@@ -39,7 +39,7 @@ spec:
     spec:
       project: task-manager
       source:
-        repoURL: https://github.com/RahulVaranasi04/mini-project-secureyes
+        repoURL: https://github.com/VaranasiRahul/mini-project-secureyes
         targetRevision: main
         path: "{{path}}"
         # For Helm wrapper charts, use helm source type
