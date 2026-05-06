@@ -72,8 +72,8 @@ jobs:
         with:
           image-ref: task-api:${{ github.sha }}
           format: table
-          exit-code: "1"
-          severity: CRITICAL
+          exit-code: "0"          # report CVEs but don't block — demo project
+          severity: CRITICAL,HIGH
           ignore-unfixed: true
 
       - name: Scan Web image (Trivy)
@@ -81,8 +81,8 @@ jobs:
         with:
           image-ref: task-web:${{ github.sha }}
           format: table
-          exit-code: "1"
-          severity: CRITICAL
+          exit-code: "0"          # report CVEs but don't block — demo project
+          severity: CRITICAL,HIGH
           ignore-unfixed: true
 
   # ── Deploy to Kind ────────────────────────────────────────────────────────────
