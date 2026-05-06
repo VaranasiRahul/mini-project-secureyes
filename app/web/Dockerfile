@@ -10,9 +10,10 @@ FROM nginx:1.27-alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# nginx needs to write to these directories
+# nginx needs to write pid + cache files when running as non-root
 RUN chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d \
- && chown -R nginx:nginx /usr/share/nginx/html
+ && chown -R nginx:nginx /usr/share/nginx/html \
+ && chown -R nginx:nginx /run
 
 USER nginx
 EXPOSE 80
