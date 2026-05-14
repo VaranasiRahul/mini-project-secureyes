@@ -81,7 +81,9 @@ helm upgrade --install loki "$REPO_ROOT/helm/charts/loki-stack" \
 # ── ArgoCD ────────────────────────────────────────────────────────────────────
 info "Installing ArgoCD..."
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -n argocd \
+# Use --server-side to avoid "annotation too long" error on large CRDs
+# (applicationsets.argoproj.io exceeds the 262144-byte client-side annotation limit)
+kubectl apply -n argocd --server-side \
   -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 kubectl rollout status deployment/argocd-server -n argocd --timeout=180s
 

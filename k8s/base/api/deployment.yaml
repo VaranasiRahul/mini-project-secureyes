@@ -26,6 +26,8 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: api
           image: task-api:local   # overlays/dev patches this tag

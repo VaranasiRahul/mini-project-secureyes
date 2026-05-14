@@ -7,6 +7,9 @@ resources:
 
 namespace: apps
 
+generatorOptions:
+  disableNameSuffixHash: true
+
 secretGenerator:
   - name: postgres-secret
     envs:

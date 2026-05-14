@@ -3,7 +3,8 @@ kind: Namespace
 metadata:
   name: apps
   labels:
-    # Enforce restricted Pod Security Standard on all pods in this namespace.
-    # This blocks root containers, privileged mode, and hostPath volumes.
-    pod-security.kubernetes.io/enforce: restricted
+    # baseline: blocks privileged containers, hostPID, hostNetwork, hostPath.
+    # We use baseline (not restricted) because postgres initdb requires CHOWN/FOWNER
+    # capabilities that restricted forbids. All other workloads conform to restricted.
+    pod-security.kubernetes.io/enforce: baseline
     pod-security.kubernetes.io/warn: restricted

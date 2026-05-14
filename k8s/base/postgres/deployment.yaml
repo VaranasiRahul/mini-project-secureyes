@@ -20,12 +20,35 @@ spec:
         runAsNonRoot: true
         runAsUser: 999
         fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      # Fix ownership of emptyDir before postgres starts.
+      # emptyDir is created root:root; postgres initdb calls chmod on it which
+      # fails without CAP_CHOWN. This init container runs as root to set ownership,
+      # then exits before the postgres container starts.
+      initContainers:
+        - name: fix-permissions
+          image: busybox:1.36
+          command: ["sh", "-c", "chown -R 999:999 /var/lib/postgresql/data && chown 999:999 /var/run/postgresql"]
+          securityContext:
+            runAsUser: 0         # root — needed just for chown
+            runAsNonRoot: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+              add: ["CHOWN"]
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+            - name: pg-run
+              mountPath: /var/run/postgresql
       containers:
         - name: postgres
           image: postgres:16-alpine
           securityContext:
             allowPrivilegeEscalation: false
-            # postgres must write to its data dir; readOnlyRootFilesystem can't be true
             readOnlyRootFilesystem: false
             capabilities:
               drop: ["ALL"]
@@ -53,19 +76,24 @@ spec:
               memory: 256Mi
           livenessProbe:
             exec:
-              command: ["pg_isready", "-U", "$(POSTGRES_USER)"]
+              command: ["pg_isready", "-U", "taskuser", "-d", "taskdb"]
             initialDelaySeconds: 15
             periodSeconds: 10
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "$(POSTGRES_USER)"]
+              command: ["pg_isready", "-U", "taskuser", "-d", "taskdb"]
             initialDelaySeconds: 5
             periodSeconds: 5
           volumeMounts:
             - name: pg-data
               mountPath: /var/lib/postgresql/data
+            - name: pg-run
+              mountPath: /var/run/postgresql
       volumes:
         # emptyDir in dev — data is ephemeral. Justified: dev data doesn't need persistence.
         # In production this should be a PersistentVolumeClaim.
         - name: pg-data
           emptyDir: {}
+        - name: pg-run
+          emptyDir: {}
+

@@ -18,6 +18,12 @@ spec:
               kubernetes.io/metadata.name: ingress-nginx
       ports:
         - port: 8000
+    # Allow from node host network (when ingress-nginx runs with hostNetwork:true in Kind).
+    - from:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - port: 8000
     # Allow Prometheus to scrape /metrics from the monitoring namespace
     - from:
         - namespaceSelector:

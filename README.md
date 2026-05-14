@@ -56,7 +56,7 @@ A full-stack Task Manager app (React + FastAPI + PostgreSQL) with a production-g
 
     Network Policies (zero-trust):
     - default-deny-all (blocks everything by default)
-    - ingress-nginx --> web, api  (allowed)
+    - host/ingress-nginx --> web, api  (allowed)
     - api --> postgres            (allowed)
     - monitoring --> api          (scrape /metrics)
 ```
@@ -212,7 +212,7 @@ promtail    healthy
 ./scripts/deploy.sh stop
 ```
 
-> **Important:** Docker Compose binds to ports 80 and 443. Stop it before starting the Kind cluster, which needs the same ports.
+> **Note:** Docker Compose binds to ports 80 and 443 via ingress-nginx. Stop it before starting the Kind cluster.
 
 ---
 
@@ -247,6 +247,8 @@ This script does everything:
 The whole process takes about 3–5 minutes.
 
 ### Step 3: Add hosts file entries
+
+Do this **before** running `bootstrap-kind.sh` or immediately after:
 
 **macOS / Linux:**
 ```bash
@@ -411,7 +413,7 @@ The **Platform Health** dashboard is automatically loaded into Grafana via a Con
 
 ### Custom alert: APINoTraffic
 
-A `PrometheusRule` CRD fires an alert when the API receives zero HTTP requests for 5 minutes. It includes a startup guard (`sum > 0`) to prevent false positives on a fresh cluster where no traffic has been generated yet.
+A `PrometheusRule` CRD fires an alert when the API receives zero HTTP requests for 2 minutes after previously having traffic. It includes a startup guard (`sum > 0`) to prevent false positives on a fresh cluster where no traffic has been generated yet.
 
 View active alerts: http://localhost:9090/alerts
 
@@ -439,10 +441,10 @@ The `apps` namespace uses a **default-deny-all** NetworkPolicy that blocks all i
 | Policy file | What it allows |
 |-------------|---------------|
 | `k8s/base/default-deny.yaml` | Blocks ALL traffic in the `apps` namespace (ingress + egress) |
-| `k8s/base/api/networkpolicy.yaml` | Allows ingress from ingress-nginx → api on port 8000 |
-| `k8s/base/web/networkpolicy.yaml` | Allows ingress from ingress-nginx → web on port 80 |
-| `k8s/base/postgres/networkpolicy.yaml` | Allows ingress from api → postgres on port 5432 |
-| `k8s/base/api/allow-prometheus-scrape.yaml` | Allows ingress from monitoring namespace → api on port 8000 (Prometheus scrape) |
+| `k8s/base/api/networkpolicy.yaml` | Allows ingress-nginx and host-network traffic → api:8000 |
+| `k8s/base/web/networkpolicy.yaml` | Allows ingress-nginx and host-network traffic → web:80 |
+| `k8s/base/postgres/networkpolicy.yaml` | Allows ingress from api → postgres on port 5432 only |
+| `k8s/base/api/allow-prometheus-scrape.yaml` | Allows ingress from monitoring namespace → api:8000 (Prometheus scrape) |
 
 ### Verify NetworkPolicies
 
@@ -452,11 +454,13 @@ kubectl get networkpolicies -n apps
 # Expected output:
 # NAME                      POD-SELECTOR    AGE
 # default-deny-all          <none>          5m
-# allow-ingress-to-api      app=api         5m
-# allow-ingress-to-web      app=web         5m
+# allow-api                 app=api         5m
+# allow-web                 app=web         5m
 # allow-api-to-postgres     app=postgres    5m
 # allow-prometheus-scrape   app=api         5m
 ```
+
+> **Kind note:** ingress-nginx runs with `hostNetwork: true` so traffic from the controller reaches pods via the Docker host IP rather than a pod namespace. The NetworkPolicies include an `ipBlock` rule to accommodate this while still blocking unexpected sources.
 
 ---
 

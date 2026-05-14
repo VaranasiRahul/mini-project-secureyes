@@ -9,6 +9,11 @@ resources:
 namespace: apps
 
 # Secret generated from a gitignored file — never committed
+# disableNameSuffixHash keeps the name as "postgres-secret" (no hash suffix)
+# so the secretKeyRef in deployment.yaml matches exactly.
+generatorOptions:
+  disableNameSuffixHash: true
+
 secretGenerator:
   - name: postgres-secret
     envs:

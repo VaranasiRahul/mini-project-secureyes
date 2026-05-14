@@ -11,10 +11,18 @@ spec:
     - Ingress
     - Egress
   ingress:
+    # Allow from ingress-nginx pod namespace (when running without hostNetwork)
     - from:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 80
+    # Allow from node host network (when ingress-nginx runs with hostNetwork:true in Kind).
+    # Traffic arrives from the Docker bridge / host IP, not from a pod namespace.
+    - from:
+        - ipBlock:
+            cidr: 0.0.0.0/0
       ports:
         - port: 80
   egress:

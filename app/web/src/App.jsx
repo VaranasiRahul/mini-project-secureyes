@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 
-const API = import.meta.env.VITE_API_URL || ''
+// All API calls go through nginx /api/ → proxied to FastAPI backend.
+// This avoids cross-origin issues and works in all environments (Compose, Kind, prod).
+const API = '/api'
 
 export default function App() {
   const [tasks, setTasks] = useState([])
