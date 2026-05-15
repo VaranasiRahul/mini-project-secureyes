@@ -58,11 +58,13 @@ helm upgrade --install ingress-nginx "$REPO_ROOT/helm/charts/ingress-nginx" \
   --wait --timeout 120s
 
 # ── external-secrets ──────────────────────────────────────────────────────────
+# Installed without --wait: the cert-controller and webhook take 3-4 minutes
+# to initialise TLS. We don't use it in this demo so we let it start in the
+# background rather than block the rest of the bootstrap.
 info "Installing external-secrets operator..."
 helm dependency update "$REPO_ROOT/helm/charts/external-secrets"
 helm upgrade --install external-secrets "$REPO_ROOT/helm/charts/external-secrets" \
-  --namespace external-secrets --create-namespace \
-  --wait --timeout 120s
+  --namespace external-secrets --create-namespace
 
 # ── kube-prometheus-stack ─────────────────────────────────────────────────────
 info "Installing kube-prometheus-stack (Prometheus + Grafana + AlertManager)..."
