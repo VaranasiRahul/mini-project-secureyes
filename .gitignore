@@ -25,3 +25,7 @@ helm/charts/*/*.lock
 # IDE
 .vscode/
 .idea/
+
+# Personal notes — keep local only
+DEMO_NOTES.md
+INTERVIEW_NOTES_*.md

@@ -101,6 +101,15 @@ kubectl apply -f "$REPO_ROOT/argocd/appproject.yaml"
 kubectl apply -f "$REPO_ROOT/argocd/applicationsets/dev-appset.yaml"
 kubectl apply -f "$REPO_ROOT/argocd/applicationsets/qat-appset.yaml"
 
+# ── Build + load local images ─────────────────────────────────────────────────
+# Kind clusters have their own image cache — images built locally aren't
+# visible inside the cluster until explicitly loaded with 'kind load'.
+info "Building and loading app images into Kind..."
+docker build -t task-api:local "$REPO_ROOT/app/api" -q
+docker build -t task-web:local "$REPO_ROOT/app/web" -q
+kind load docker-image task-api:local --name "$CLUSTER_NAME"
+kind load docker-image task-web:local --name "$CLUSTER_NAME"
+
 # ── Dev overlay (direct apply for immediate testing) ──────────────────────────
 info "Creating dev secret (if secret.env exists)..."
 if [[ -f "$REPO_ROOT/k8s/overlays/dev/secret.env" ]]; then
