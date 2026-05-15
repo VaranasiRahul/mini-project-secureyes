@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────────────────
-# bootstrap-kind.sh — Full end-to-end Kind cluster setup
-# Run once on a fresh machine after installing prerequisites.
+# bootstrap-kind.sh — Kind cluster lifecycle manager
 #
-# Steps:
-#   1. Create Kind cluster
-#   2. Install Helm repos
-#   3. Install ingress-nginx
-#   4. Install kube-prometheus-stack (Prometheus + Grafana)
-#   5. Install loki-stack
-#   6. Install ArgoCD
-#   7. Apply ArgoCD project + ApplicationSets
-#   8. Apply dev overlay directly (immediate fallback without ArgoCD sync)
+# Usage:
+#   ./scripts/bootstrap-kind.sh           # start (create cluster + install everything)
+#   ./scripts/bootstrap-kind.sh stop      # delete the cluster completely
+#   ./scripts/bootstrap-kind.sh status    # show pod status across all namespaces
+#   ./scripts/bootstrap-kind.sh restart   # delete + recreate from scratch
 #
 # Prerequisites: docker, kind, kubectl, helm, kustomize
 # ──────────────────────────────────────────────────────────────────────────────
@@ -22,6 +17,49 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 info()  { echo ""; echo "▶  $*"; }
 check() { command -v "$1" &>/dev/null || { echo "ERROR: $1 not found. Install it first."; exit 1; }; }
+
+# ── Argument handling ─────────────────────────────────────────────────────────
+ACTION="${1:-start}"
+
+case "$ACTION" in
+  stop)
+    info "Deleting Kind cluster '$CLUSTER_NAME'..."
+    kind delete cluster --name "$CLUSTER_NAME" && echo "" && echo "✅  Cluster deleted." || echo "⚠️  Cluster not found (already stopped)."
+    info "Killing any dangling port-forwards..."
+    pkill -f "kubectl port-forward" 2>/dev/null && echo "   Port-forwards stopped." || echo "   No port-forwards running."
+    exit 0
+    ;;
+  status)
+    info "Cluster info..."
+    kubectl cluster-info --context "kind-${CLUSTER_NAME}" 2>/dev/null || { echo "   Cluster not running."; exit 1; }
+    echo ""
+    echo "── apps namespace ──────────────────────────────────"
+    kubectl get pods -n apps 2>/dev/null || echo "   (no apps namespace)"
+    echo ""
+    echo "── ingress-nginx ───────────────────────────────────"
+    kubectl get pods -n ingress-nginx 2>/dev/null || echo "   (not installed)"
+    echo ""
+    echo "── monitoring ──────────────────────────────────────"
+    kubectl get pods -n monitoring 2>/dev/null || echo "   (not installed)"
+    echo ""
+    echo "── argocd ──────────────────────────────────────────"
+    kubectl get applications -n argocd 2>/dev/null || echo "   (not installed)"
+    exit 0
+    ;;
+  restart)
+    info "Restarting cluster (delete + recreate)..."
+    kind delete cluster --name "$CLUSTER_NAME" 2>/dev/null || true
+    pkill -f "kubectl port-forward" 2>/dev/null || true
+    # Fall through to start
+    ;;
+  start)
+    : # fall through to the main script below
+    ;;
+  *)
+    echo "Usage: $0 [start|stop|status|restart]"
+    exit 1
+    ;;
+esac
 
 # ── Preflight ──────────────────────────────────────────────────────────────────
 info "Checking prerequisites..."
