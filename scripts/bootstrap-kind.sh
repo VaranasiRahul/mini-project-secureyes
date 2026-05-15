@@ -91,9 +91,19 @@ helm repo update
 # ── ingress-nginx ─────────────────────────────────────────────────────────────
 info "Installing ingress-nginx..."
 helm dependency update "$REPO_ROOT/helm/charts/ingress-nginx"
+# Pre-pull the controller image into the Kind node so the DaemonSet starts
+# immediately without waiting for an image pull inside the cluster.
+NGINX_IMAGE=$(helm show values "$REPO_ROOT/helm/charts/ingress-nginx/charts/ingress-nginx" \
+  --jsonpath='{.controller.image.registry}/{.controller.image.image}:{.controller.image.tag}' \
+  2>/dev/null || echo "registry.k8s.io/ingress-nginx/controller:v1.12.0")
+echo "   Pre-pulling $NGINX_IMAGE into Kind node..."
+docker pull "$NGINX_IMAGE" -q 2>/dev/null || true
+kind load docker-image "$NGINX_IMAGE" --name "$CLUSTER_NAME" 2>/dev/null || true
+
 helm upgrade --install ingress-nginx "$REPO_ROOT/helm/charts/ingress-nginx" \
   --namespace ingress-nginx --create-namespace \
-  --wait --timeout 120s
+  --wait --timeout 180s
+
 
 # ── external-secrets ──────────────────────────────────────────────────────────
 # Installed without --wait: the cert-controller and webhook take 3-4 minutes
