@@ -7,33 +7,14 @@ spec:
   generators:
     - list:
         elements:
-          # ── Wave 0: networking infra + secret management ─────────────────────
-          - app: ingress-nginx
-            path: helm/charts/ingress-nginx
-            namespace: ingress-nginx
-            wave: "0"
-
-          - app: external-secrets
-            path: helm/charts/external-secrets
-            namespace: external-secrets
-            wave: "0"
-
-          # ── Wave 1: monitoring stack ─────────────────────────────────────────
-          - app: monitoring
-            path: helm/charts/kube-prometheus-stack
-            namespace: monitoring
-            wave: "1"
-
-          # ── Wave 2: log aggregation ──────────────────────────────────────────
-          - app: loki
-            path: helm/charts/loki-stack
-            namespace: monitoring
-            wave: "2"
-
-          # ── Wave 10-20: application tier ─────────────────────────────────────
-          # postgres (wave 10), api + web (wave 20) are controlled by
-          # sync-wave annotations ON the individual k8s resources in k8s/base/.
-          # ArgoCD deploys them in the correct order within this single app.
+          # ArgoCD manages the application tier only.
+          # Infrastructure (ingress-nginx, monitoring, loki, external-secrets)
+          # is installed once by bootstrap-kind.sh and is not managed by ArgoCD
+          # to avoid duplicate installs competing for the same host ports.
+          #
+          # Sync-wave annotations ON the k8s resources themselves control ordering:
+          #   postgres → wave 10  (must be healthy before api connects)
+          #   api + web → wave 20 (start after postgres)
           - app: apps
             path: k8s/overlays/dev
             namespace: apps
